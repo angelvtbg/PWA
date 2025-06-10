@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Alien Rain</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #282c34; 
+      font-family: 'Press Start 2P', cursive; 
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #game-container {
+      position: relative;
+      width: 400px; 
+      height: 600px; 
+      background-color: #000;
+      overflow: hidden;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    #start-screen,
+    #game-over-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #282c34;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 10;
+    }
+
+    #start-screen h1,
+    #game-over-screen h1 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+
+    #start-screen h2,
+    #game-over-screen h2 {
+      font-size: 1em;
+      margin-bottom: 100px;
+    }
+
+    #start-screen p {
+      font-size: 1em;
+      margin-top: 10px;
+    }
+
+    #start-screen img,
+    #game-over-screen img {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+    }
+
+    #play-button,
+    #play-again-button {
+      background-color: #ffffff;
+      color: rgb(0, 0, 0);
+      padding: 10px 20px;
+      font-size: 1.5em;
+      font-weight: 50;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #play-button:hover,
+    #play-again-button:hover {
+      background-color: #27ae60;
+    }
+
+    #player {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      bottom: 20px;
+      background-image: url('ufo.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: left 0.05s linear;
+    }
+
+    .alien-drop {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-image: url('drop.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 20px;
+      z-index: 1;
+    }
+
+    #game-over-screen {
+      display: none;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <div id="player"></div>
+    <div id="score">Score: 0</div>
+    <div id="game-over-screen">
+      <h1>Game Over</h1>
+      <h2 id="final-score">Final Score: 0</h2>
+      <button id="play-again-button">Play Again</button>
+    </div>
+  </div>
+
+  <div id="start-screen">
+    <h2>No Internet, You're Offline !</h2>
+    <img src="ufo.png" alt="UFO">
+    <h1>Alien Rain</h1>
+    <p>Press any key to Play</p>
+  </div>
+
+  <script>
+    const player = document.getElementById('player');
+    const gameContainer = document.getElementById('game-container');
+    const scoreElement = document.getElementById('score');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const playAgainButton = document.getElementById('play-again-button');
+
+    let score = 0;
+    let isGameOver = false;
+    let dropSpeed = 5;
+    let spawnRate = 1500;
+    let gameInterval;
+
+    document.addEventListener('keydown', (e) => {
+      if (isGameOver) return;
+
+      let playerLeft = player.offsetLeft;
+      const playerWidth = player.offsetWidth;
+      const gameContainerWidth = gameContainer.offsetWidth;
+
+      if (e.key === 'ArrowLeft' || e.key === 'a') {
+        playerLeft -= 20;
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        playerLeft += 20;
+      }
+
+      if (playerLeft < 0) {
+        playerLeft = 0;
+      } else if (playerLeft + playerWidth > gameContainerWidth) {
+        playerLeft = gameContainerWidth - playerWidth;
+      }
+      player.style.left = `${playerLeft}px`;
+    });
+
+    function createAlienDrop() {
+      if (isGameOver) return;
+
+      const drop = document.createElement('div');
+      drop.className = 'alien-drop';
+      drop.style.left = `${Math.random() * (gameContainer.offsetWidth - 40)}px`;
+      drop.style.top = '0';
+      gameContainer.appendChild(drop);
+
+      let dropInterval = setInterval(() => {
+        const dropTop = parseInt(drop.style.top) || 0;
+        drop.style.top = `${dropTop + dropSpeed}px`;
+
+        if (
+          dropTop + drop.offsetHeight >= player.offsetTop &&
+          drop.offsetLeft + drop.offsetWidth >= player.offsetLeft &&
+          drop.offsetLeft <= player.offsetLeft + player.offsetWidth &&
+          dropTop <= player.offsetTop + player.offsetHeight
+        ) {
+          gameOver();
+          clearInterval(dropInterval);
+        }
+
+        if (dropTop > gameContainer.offsetHeight) {
+          drop.remove();
+          clearInterval(dropInterval);
+          if (!isGameOver) {
+            score++;
+            scoreElement.textContent = `Score: ${score}`;
+            
+            if (score % 10 === 0) {
+              dropSpeed += 0.5;
+              spawnRate = Math.max(300, spawnRate - 100);
+              clearInterval(gameInterval);
+              gameInterval = setInterval(createAlienDrop, spawnRate);
+            }
+          }
+        }
+      }, 20);
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      clearInterval(gameInterval);
+      gameOverScreen.style.display = 'flex';
+      document.getElementById('final-score').textContent = `Final Score: ${score}`;
+      
+      document.querySelectorAll('.alien-drop').forEach(drop => {
+        drop.remove();
+      });
+    }
+
+    playAgainButton.addEventListener('click', () => {
+      location.reload();
+    });
+
+    // Add keyboard event listener for play again
+    document.addEventListener('keydown', (e) => {
+      if (isGameOver && (e.key === 'Enter' || e.key === ' ')) {
+        location.reload();
+      }
+    });
+
+    document.addEventListener('keydown', startGame, { once: true });
+    document.addEventListener('touchstart', startGame, { once: true });
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      gameContainer.style.display = 'block';
+      player.style.left = `${(gameContainer.offsetWidth / 2) - (player.offsetWidth / 2)}px`;
+      gameInterval = setInterval(createAlienDrop, spawnRate);
+    }
+  </script>
+</body>
+</html>
